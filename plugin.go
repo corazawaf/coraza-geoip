@@ -14,3 +14,11 @@ func RegisterGeoDatabase(database []byte, databaseType string) {
 	plugins.RegisterOperator("geoLookup", newGeolookupCreator(db, databaseType))
 }
 
+func RegisterGeoDatabaseFromFile(databasePath string, databaseType string) {
+	db, err := geoip2.Open(databasePath)
+	if err != nil {
+		panic(err)
+	}
+
+	plugins.RegisterOperator("geoLookup", newGeolookupCreator(db, databaseType))
+}

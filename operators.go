@@ -1,9 +1,8 @@
 package plugin
 
 import (
-	_ "embed"
+	"fmt"
 	"net"
-	"strconv"
 
 	"github.com/corazawaf/coraza/v3/collection"
 	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
@@ -11,76 +10,44 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-
-type geo struct {
-	db 		 *geoip2.Reader
-	dbtype   string
+// this acts as a shim for the geoip2.Reader struct so we can mock it in tests
+type geoIPReaderShim interface {
+	City(ip net.IP) (*geoip2.City, error)
+	Country(ip net.IP) (*geoip2.Country, error)
 }
 
-func newGeolookupCreator(db *geoip2.Reader, databaseType string) func(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-	return func(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
-		return newGeolookup(options, db, databaseType)
+// this acts as a shim for the collection.Map struct so we can mock it in tests
+type collectionShim interface {
+	Set(key string, values []string)
+}
+
+// this acts as a shim for the plugintypes.TransactionState struct so we can mock it in tests
+type txShim interface {
+	GetGeoCollection(tx txShim) (collectionShim, error)
+}
+
+type txShimmer struct {
+	tx plugintypes.TransactionState
+}
+
+func (t *txShimmer) GetGeoCollection(tx txShim) (collectionShim, error) {
+	if c, ok := t.tx.Collection(variables.Geo).(collection.Map); ok {
+		if c == nil {
+			return nil, fmt.Errorf("collection is nil")
+		}
+		return c, nil
 	}
+	return nil, fmt.Errorf("collection not found or not a map")
 }
 
-func newGeolookup(options plugintypes.OperatorOptions, db *geoip2.Reader, databaseType string) (plugintypes.Operator, error) {
-	return &geo{db: db, dbtype: databaseType}, nil
-}
-
-func (o *geo) ApplyVariablesCity(col collection.Map, ip net.IP) bool {
-	r, err := o.db.City(ip)
-	if err != nil {
-		return false
-	}
-
-	col.Set("country_code", []string{r.Country.IsoCode})
-	col.Set("country_name", []string{r.Country.Names["en"]})
-	col.Set("country_continent", []string{r.Continent.Names["en"]})
-	col.Set("region", []string{""})
-	col.Set("city", []string{r.City.Names["en"]})
-	col.Set("postal_code", []string{r.Postal.Code})
-	col.Set("latitude", []string{strconv.FormatFloat(r.Location.Latitude, 'f', 10, 64)})
-	col.Set("longitude", []string{strconv.FormatFloat(r.Location.Longitude, 'f', 10, 64)})
-
-	return true
-}
-
-func (o *geo) ApplyVariablesCountry(col collection.Map, ip net.IP) bool {
-	r, err := o.db.Country(ip)
-	if err != nil {
-		return false
-	}
-
-	col.Set("country_code", []string{r.Country.IsoCode})
-	col.Set("country_name", []string{r.Country.Names["en"]})
-	col.Set("country_continent", []string{r.Continent.Names["en"]})
-
-	return true
-}
-
-
+// this is the entry point for the plugin, we hide the implementation details here
+// and expose a slimmer interface to the actual plugin logic
 func (o *geo) Evaluate(tx plugintypes.TransactionState, value string) bool {
-	ip := net.ParseIP(value)
-
-	var col collection.Map
-	if c, ok := tx.Collection(variables.Geo).(collection.Map); !ok {
-		tx.DebugLogger().Error().Msg("collection in getset is not a map")
-		return false
-	} else {
-		col = c
-	}
-	if col == nil {
-		tx.DebugLogger().Error().Msg("collection in getset is nil")
+	txShim := &txShimmer{tx: tx}
+	result, err := o.executeEvaluationInternal(txShim, value)
+	if err != nil {
+		tx.DebugLogger().Error().Msg(fmt.Sprintf("error looking up geoip: %s", err))
 		return false
 	}
-
-	switch(o.dbtype) {
-	case "city":
-		return o.ApplyVariablesCity(col, ip)
-	case "country":
-		return o.ApplyVariablesCountry(col, ip)
-	default:
-		tx.DebugLogger().Error().Msg("invalid database type")
-		return false
-	}
+	return result
 }
