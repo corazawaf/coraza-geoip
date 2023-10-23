@@ -10,7 +10,7 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-var _ Transaction = (*transaction)(nil)
+var _ transaction = (*transactionWrapper)(nil)
 
 // this acts as a shim for the geoip2.Reader struct so we can mock it in tests
 type geoIPReader interface {
@@ -24,15 +24,15 @@ type mapCollection interface {
 }
 
 // this acts as a shim for the plugintypes.TransactionState struct so we can mock it in tests
-type Transaction interface {
-	GetGeoCollection(tx Transaction) (mapCollection, error)
+type transaction interface {
+	GetGeoCollection(tx transaction) (mapCollection, error)
 }
 
-type transaction struct {
+type transactionWrapper struct {
 	tx plugintypes.TransactionState
 }
 
-func (t *transaction) GetGeoCollection(tx Transaction) (mapCollection, error) {
+func (t *transactionWrapper) GetGeoCollection(tx transaction) (mapCollection, error) {
 	if c, ok := t.tx.Collection(variables.Geo).(collection.Map); ok {
 		if c == nil {
 			return nil, fmt.Errorf("collection is nil")
@@ -45,7 +45,7 @@ func (t *transaction) GetGeoCollection(tx Transaction) (mapCollection, error) {
 // this is the entry point for the plugin, we hide the implementation details here
 // and expose a slimmer interface to the actual plugin logic
 func (o *geo) Evaluate(tx plugintypes.TransactionState, value string) bool {
-	transaction := &transaction{tx: tx}
+	transaction := &transactionWrapper{tx: tx}
 	result, err := o.executeEvaluationInternal(transaction, value)
 	if err != nil {
 		tx.DebugLogger().Error().Msg(fmt.Sprintf("error looking up geoip: %s", err))

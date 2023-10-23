@@ -188,7 +188,7 @@ func NewTxMock(col *collectionMock) *transactionMock {
 	return txMock
 }
 
-func (t *transactionMock) GetGeoCollection(tx Transaction) (mapCollection, error) {
+func (t *transactionMock) GetGeoCollection(tx transaction) (mapCollection, error) {
 	args := t.Called(tx)
 	return args.Get(0).(mapCollection), args.Error(1)
 }

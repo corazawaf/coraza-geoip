@@ -57,7 +57,7 @@ func (o *geo) ApplyVariablesCountry(col mapCollection, ip net.IP) (bool, error) 
 	return true, nil
 }
 
-func (o *geo) executeEvaluationInternal(tx Transaction, value string) (bool, error) {
+func (o *geo) executeEvaluationInternal(tx transaction, value string) (bool, error) {
 	col, err := tx.GetGeoCollection(tx)
 	if err != nil {
 		return false, err
