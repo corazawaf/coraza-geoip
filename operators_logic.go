@@ -10,7 +10,7 @@ import (
 )
 
 type geo struct {
-	db     geoIPReaderShim
+	db     geoIPReader
 	dbtype string
 }
 
@@ -24,7 +24,7 @@ func newGeolookup(options plugintypes.OperatorOptions, db *geoip2.Reader, databa
 	return &geo{db: db, dbtype: databaseType}, nil
 }
 
-func (o *geo) ApplyVariablesCity(col collectionShim, ip net.IP) (bool, error) {
+func (o *geo) ApplyVariablesCity(col mapCollection, ip net.IP) (bool, error) {
 	r, err := o.db.City(ip)
 	if err != nil {
 		return false, err
@@ -43,7 +43,7 @@ func (o *geo) ApplyVariablesCity(col collectionShim, ip net.IP) (bool, error) {
 	return true, nil
 }
 
-func (o *geo) ApplyVariablesCountry(col collectionShim, ip net.IP) (bool, error) {
+func (o *geo) ApplyVariablesCountry(col mapCollection, ip net.IP) (bool, error) {
 	r, err := o.db.Country(ip)
 	if err != nil {
 		return false, err
@@ -57,7 +57,7 @@ func (o *geo) ApplyVariablesCountry(col collectionShim, ip net.IP) (bool, error)
 	return true, nil
 }
 
-func (o *geo) executeEvaluationInternal(tx txShim, value string) (bool, error) {
+func (o *geo) executeEvaluationInternal(tx Transaction, value string) (bool, error) {
 	col, err := tx.GetGeoCollection(tx)
 	if err != nil {
 		return false, err

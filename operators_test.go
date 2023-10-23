@@ -178,24 +178,24 @@ func SetupTest(dbType string) *sut {
 	return &sut{geoInstance: geoInstance, tx: tx, reader: reader, col: col}
 }
 
-type txShimMock struct {
+type transactionMock struct {
 	mock.Mock
 }
 
-func NewTxMock(col *collectionMock) *txShimMock {
-	txMock := &txShimMock{}
+func NewTxMock(col *collectionMock) *transactionMock {
+	txMock := &transactionMock{}
 	txMock.On("GetGeoCollection", mock.Anything).Return(col, nil)
 	return txMock
 }
 
-func (t *txShimMock) GetGeoCollection(tx txShim) (collectionShim, error) {
+func (t *transactionMock) GetGeoCollection(tx Transaction) (mapCollection, error) {
 	args := t.Called(tx)
-	return args.Get(0).(collectionShim), args.Error(1)
+	return args.Get(0).(mapCollection), args.Error(1)
 }
 
 type sut struct {
 	geoInstance *geo
 	reader      *mockGeoIPReader
-	tx          *txShimMock
+	tx          *transactionMock
 	col         *collectionMock
 }
