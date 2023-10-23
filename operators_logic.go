@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -58,6 +59,9 @@ func (o *geo) applyVariablesCountry(col mapCollection, ip net.IP) (bool, error) 
 }
 
 func (o *geo) executeEvaluationInternal(tx transaction, value string) (bool, error) {
+	if len(value) == 0 {
+		return false, errors.New("empty IP")
+	}
 	col, err := tx.GetGeoCollection(tx)
 	if err != nil {
 		return false, err
