@@ -24,7 +24,7 @@ func newGeolookup(options plugintypes.OperatorOptions, db *geoip2.Reader, databa
 	return &geo{db: db, dbtype: databaseType}, nil
 }
 
-func (o *geo) ApplyVariablesCity(col mapCollection, ip net.IP) (bool, error) {
+func (o *geo) applyVariablesCity(col mapCollection, ip net.IP) (bool, error) {
 	r, err := o.db.City(ip)
 	if err != nil {
 		return false, err
@@ -43,7 +43,7 @@ func (o *geo) ApplyVariablesCity(col mapCollection, ip net.IP) (bool, error) {
 	return true, nil
 }
 
-func (o *geo) ApplyVariablesCountry(col mapCollection, ip net.IP) (bool, error) {
+func (o *geo) applyVariablesCountry(col mapCollection, ip net.IP) (bool, error) {
 	r, err := o.db.Country(ip)
 	if err != nil {
 		return false, err
@@ -68,9 +68,9 @@ func (o *geo) executeEvaluationInternal(tx transaction, value string) (bool, err
 	}
 	switch o.dbtype {
 	case "city":
-		return o.ApplyVariablesCity(col, ip)
+		return o.applyVariablesCity(col, ip)
 	case "country":
-		return o.ApplyVariablesCountry(col, ip)
+		return o.applyVariablesCountry(col, ip)
 	default:
 		return false, fmt.Errorf("invalid database type")
 	}

@@ -10,10 +10,10 @@ import (
 )
 
 func TestApplyVariablesCity(t *testing.T) {
-	sut := SetupTest("city")
+	sut := setupTest("city")
 
 	ip := net.ParseIP("8.8.8.8")
-	result, err := sut.geoInstance.ApplyVariablesCity(sut.col, ip)
+	result, err := sut.geoInstance.applyVariablesCity(sut.col, ip)
 
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -29,10 +29,10 @@ func TestApplyVariablesCity(t *testing.T) {
 }
 
 func TestApplyVariablesCountry(t *testing.T) {
-	sut := SetupTest("country")
+	sut := setupTest("country")
 
 	ip := net.ParseIP("8.8.8.8")
-	result, err := sut.geoInstance.ApplyVariablesCountry(sut.col, ip)
+	result, err := sut.geoInstance.applyVariablesCountry(sut.col, ip)
 
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -43,7 +43,7 @@ func TestApplyVariablesCountry(t *testing.T) {
 }
 
 func TestEvaluateCity(t *testing.T) {
-	sut := SetupTest("city")
+	sut := setupTest("city")
 
 	_, err := sut.geoInstance.executeEvaluationInternal(sut.tx, "8.8.8.8")
 
@@ -52,7 +52,7 @@ func TestEvaluateCity(t *testing.T) {
 }
 
 func TestEvaluateCountry(t *testing.T) {
-	sut := SetupTest("country")
+	sut := setupTest("country")
 
 	_, err := sut.geoInstance.executeEvaluationInternal(sut.tx, "8.8.8.8")
 
@@ -61,7 +61,7 @@ func TestEvaluateCountry(t *testing.T) {
 }
 
 func TestEvaluateInvalidDbType(t *testing.T) {
-	sut := SetupTest("invalid")
+	sut := setupTest("invalid")
 
 	_, err := sut.geoInstance.executeEvaluationInternal(sut.tx, "8.8.8.8")
 
@@ -69,7 +69,7 @@ func TestEvaluateInvalidDbType(t *testing.T) {
 }
 
 func TestReturnFalseOnInvalidIp(t *testing.T) {
-	sut := SetupTest("city")
+	sut := setupTest("city")
 
 	_, err := sut.geoInstance.executeEvaluationInternal(sut.tx, "invalid")
 
@@ -80,7 +80,7 @@ type mockGeoIPReader struct {
 	mock.Mock
 }
 
-func NewMockGeoIPReader() *mockGeoIPReader {
+func newMockGeoIPReader() *mockGeoIPReader {
 	reader := &mockGeoIPReader{}
 	reader.On("City", mock.Anything).Return(&geoip2.City{
 		Country: struct {
@@ -160,7 +160,7 @@ type collectionMock struct {
 	mock.Mock
 }
 
-func NewCollectionMock() *collectionMock {
+func newCollectionMock() *collectionMock {
 	colMock := &collectionMock{}
 	colMock.On("Set", mock.Anything, mock.Anything).Return()
 	return colMock
@@ -170,11 +170,11 @@ func (c *collectionMock) Set(key string, values []string) {
 	c.Called(key, values)
 }
 
-func SetupTest(dbType string) *sut {
-	reader := NewMockGeoIPReader()
+func setupTest(dbType string) *sut {
+	reader := newMockGeoIPReader()
 	geoInstance := &geo{db: reader, dbtype: dbType}
-	col := NewCollectionMock()
-	tx := NewTxMock(col)
+	col := newCollectionMock()
+	tx := newTxMock(col)
 	return &sut{geoInstance: geoInstance, tx: tx, reader: reader, col: col}
 }
 
@@ -182,7 +182,7 @@ type transactionMock struct {
 	mock.Mock
 }
 
-func NewTxMock(col *collectionMock) *transactionMock {
+func newTxMock(col *collectionMock) *transactionMock {
 	txMock := &transactionMock{}
 	txMock.On("GetGeoCollection", mock.Anything).Return(col, nil)
 	return txMock
