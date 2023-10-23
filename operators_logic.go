@@ -64,7 +64,7 @@ func (o *geo) executeEvaluationInternal(tx Transaction, value string) (bool, err
 	}
 	ip := net.ParseIP(value)
 	if ip == nil {
-		return false, fmt.Errorf("invalid ip")
+		return false, fmt.Errorf("invalid ip %q", value)
 	}
 	switch o.dbtype {
 	case "city":
