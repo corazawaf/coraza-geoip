@@ -22,6 +22,6 @@ func RegisterGeoDatabaseFromHandler(handler func() (*geoip2.Reader, error), data
 	if err != nil {
 		return err
 	}
-	plugins.RegisterOperator("geoLookup", newGeolookupCreator(db, databaseType))
+	plugins.RegisterOperator("geoLookup", newGeolookupBuilder(db, databaseType))
 	return nil
 }

@@ -15,7 +15,7 @@ type geo struct {
 	dbtype string
 }
 
-func newGeolookupCreator(db *geoip2.Reader, databaseType string) func(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
+func newGeolookupBuilder(db *geoip2.Reader, databaseType string) func(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 	return func(options plugintypes.OperatorOptions) (plugintypes.Operator, error) {
 		return newGeolookup(options, db, databaseType)
 	}
@@ -70,6 +70,11 @@ func (o *geo) executeEvaluationInternal(tx transaction, value string) (bool, err
 	if ip == nil {
 		return false, fmt.Errorf("invalid ip %q", value)
 	}
+
+	if ip.IsPrivate() || ip.IsLoopback() || ip.IsUnspecified() {
+		return false, nil
+	}
+
 	switch o.dbtype {
 	case "city":
 		return o.applyVariablesCity(col, ip)
