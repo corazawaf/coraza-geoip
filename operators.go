@@ -1,42 +1,55 @@
 package plugin
 
 import (
+	"fmt"
 	"net"
-	"strconv"
 
-	"github.com/corazawaf/coraza/v2"
-	"github.com/corazawaf/coraza/v2/types/variables"
-	geoip "github.com/oschwald/geoip2-golang"
+	"github.com/corazawaf/coraza/v3/collection"
+	"github.com/corazawaf/coraza/v3/experimental/plugins/plugintypes"
+	"github.com/corazawaf/coraza/v3/types/variables"
+	"github.com/oschwald/geoip2-golang"
 )
 
-type geoLookup struct{}
+var _ transaction = (*transactionWrapper)(nil)
 
-func (o *geoLookup) Init(data string) error {
-	return nil
+// this acts as a shim for the geoip2.Reader struct so we can mock it in tests
+type geoIPReader interface {
+	City(ip net.IP) (*geoip2.City, error)
+	Country(ip net.IP) (*geoip2.Country, error)
 }
 
-func (o *geoLookup) Evaluate(tx *coraza.Transaction, value string) bool {
-	db, ok := tx.Waf.Config.Get("geoip", nil).(*geoip.Reader)
-	if !ok || db == nil {
-		return false
-	}
+// this acts as a shim for the collection.Map struct so we can mock it in tests
+type mapCollection interface {
+	Set(key string, values []string)
+}
 
-	ip := net.ParseIP(value)
-	r, err := db.City(ip)
+// this acts as a shim for the plugintypes.TransactionState struct so we can mock it in tests
+type transaction interface {
+	GetGeoCollection(tx transaction) (mapCollection, error)
+}
+
+type transactionWrapper struct {
+	tx plugintypes.TransactionState
+}
+
+func (t *transactionWrapper) GetGeoCollection(tx transaction) (mapCollection, error) {
+	if c, ok := t.tx.Collection(variables.Geo).(collection.Map); ok {
+		if c == nil {
+			return nil, fmt.Errorf("collection is nil")
+		}
+		return c, nil
+	}
+	return nil, fmt.Errorf("collection not found or not a map")
+}
+
+// this is the entry point for the plugin, we hide the implementation details here
+// and expose a slimmer interface to the actual plugin logic
+func (o *geo) Evaluate(tx plugintypes.TransactionState, value string) bool {
+	transaction := &transactionWrapper{tx: tx}
+	result, err := o.executeEvaluationInternal(transaction, value)
 	if err != nil {
-		// do we generate an error?
+		tx.DebugLogger().Error().Msg(fmt.Sprintf("error looking up geoip: %s", err))
 		return false
 	}
-
-	tx.GetCollection(variables.Geo).Set("country_code", []string{r.Country.IsoCode})
-	tx.GetCollection(variables.Geo).Set("country_name", []string{r.Country.Names["en"]})
-	tx.GetCollection(variables.Geo).Set("country_continent", []string{r.Continent.Names["en"]})
-	tx.GetCollection(variables.Geo).Set("region", []string{""})
-	tx.GetCollection(variables.Geo).Set("city", []string{r.City.Names["en"]})
-	tx.GetCollection(variables.Geo).Set("postal_code", []string{r.Postal.Code})
-	tx.GetCollection(variables.Geo).Set("latitude", []string{strconv.FormatFloat(r.Location.Latitude, 'f', 10, 64)})
-	tx.GetCollection(variables.Geo).Set("longitude", []string{strconv.FormatFloat(r.Location.Longitude, 'f', 10, 64)})
-	return true
+	return result
 }
-
-var _ coraza.RuleOperator = &geoLookup{}
