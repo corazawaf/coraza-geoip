@@ -71,7 +71,7 @@ func (o *geo) executeEvaluationInternal(tx transaction, value string) (bool, err
 		return false, fmt.Errorf("invalid ip %q", value)
 	}
 
-	if ip.IsPrivate() || ip.IsLoopback() || ip.IsUnspecified() {
+	if IsSpecialIpRangeToBeSkipped(ip) {
 		return false, nil
 	}
 
