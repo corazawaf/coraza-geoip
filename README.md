@@ -37,7 +37,7 @@ This plugin enables GeoIP lookup functionality for Coraza Web Application Firewa
    var geoIpDatabase []byte
 
    func init() {
-       geo.RegisterDatabase(geoIpDatabase, "country")
+       geo.RegisterGeoDatabase(geoIpDatabase, "country")
    }
    ```
 
@@ -51,7 +51,7 @@ This plugin enables GeoIP lookup functionality for Coraza Web Application Firewa
 
 
    func init() {
-       geo.RegisterDatabaseFromFile("geoip-database.mmdb", "city")
+       geo.RegisterGeoDatabaseFromFile("geoip-database.mmdb", "city")
    }
    ```
 
